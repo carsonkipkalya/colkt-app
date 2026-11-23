@@ -67,6 +67,26 @@ impl ErrorCode {
 
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
-        AppError::new(ErrorCode::IoError, err.to_string())
+        // Only the error kind is logged: raw OS error text may contain
+        // filesystem paths, which must not reach logs or the frontend.
+        log::warn!("I/O error: {:?}", err.kind());
+        AppError::new(ErrorCode::IoError, "I/O operation failed")
+    }
+}
+
+impl From<rusqlite::Error> for AppError {
+    fn from(err: rusqlite::Error) -> Self {
+        // Raw SQLite diagnostics (which may include statement text) are kept
+        // out of the IPC payload. Only numeric result codes are logged.
+        if let rusqlite::Error::SqliteFailure(sqlite_err, _) = &err {
+            log::error!(
+                "database error: sqlite code {:?}, extended code {}",
+                sqlite_err.code,
+                sqlite_err.extended_code
+            );
+        } else {
+            log::error!("database error: non-SQLite rusqlite failure");
+        }
+        AppError::new(ErrorCode::Internal, "database operation failed")
     }
 }

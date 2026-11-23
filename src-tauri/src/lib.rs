@@ -1,4 +1,9 @@
+pub mod db;
 pub mod error;
+
+use tauri::Manager;
+
+use crate::error::{AppError, ErrorCode};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -12,6 +17,14 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            let data_dir = app.path().app_data_dir().map_err(|_| {
+                log::error!("failed to resolve application data directory");
+                AppError::new(ErrorCode::Internal, "failed to initialize application data")
+            })?;
+            let database = db::Database::open(&data_dir.join("colkt.db"))?;
+            app.manage(database);
+
             Ok(())
         })
         .run(tauri::generate_context!())
