@@ -187,11 +187,35 @@ Use Tauri's capability and permission system with least privilege.
 
 Production builds must define a restrictive Content Security Policy (CSP).
 
+The configured production policy in `src-tauri/tauri.conf.json` (`app.security.csp`) is:
+
+```text
+default-src 'self';
+script-src 'self';
+style-src 'self';
+img-src 'self' asset: http://asset.localhost;
+font-src 'self';
+connect-src 'self' ipc: http://ipc.localhost;
+object-src 'none';
+base-uri 'none';
+form-action 'none';
+frame-ancestors 'none'
+```
+
+Directive rationale:
+
+- `default-src 'self'` — all resources load from the bundled application origin; no remote content by default.
+- `script-src 'self'` — no inline or remote scripts. Tauri injects per-asset nonce/hash sources for bundled scripts at build time.
+- `style-src 'self'` — bundled stylesheets only. The current frontend uses CSS Modules and custom properties with no inline `style` attributes or `<style>` elements, so `'unsafe-inline'` is not required. If a future component needs inline styles, this directive must be reconsidered deliberately.
+- `img-src 'self' asset: http://asset.localhost` — application assets plus the Tauri asset protocol used for local media artwork.
+- `font-src 'self'` — bundled fonts only.
+- `connect-src 'self' ipc: http://ipc.localhost` — frontend-to-backend IPC transports required by Tauri 2.
+- `object-src 'none'`, `base-uri 'none'`, `form-action 'none'`, `frame-ancestors 'none'` — block plugin content, base-tag hijacking, external form posts, and embedding.
+
+A separate `devCsp` applies only during `tauri dev`: it additionally allows `'unsafe-inline'` scripts (React Refresh preamble) and `ws:` connections (Vite HMR websocket). The production `csp` is never relaxed for the dev server.
+
 - Avoid unrestricted `unsafe-eval`.
 - Avoid broad wildcard sources.
-- Restrict script and style sources to what the application requires.
-- Restrict network connections to required metadata providers and resource mechanisms.
-- Allow only the controlled local resource-loading mechanism needed by playback and reading.
 - Review CSP changes alongside reader and media-engine integration.
 
 The development server may require additional development-only allowances. These must not leak into production configuration.

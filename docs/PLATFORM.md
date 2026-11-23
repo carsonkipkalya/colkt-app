@@ -270,7 +270,46 @@ Before considering platform functionality complete, validate it on the actual ta
 
 Record unresolved platform limitations in the relevant documentation or an ADR.
 
-## 7. Non-Goals for V1
+## 7. Verified Build Environment
+
+The following was verified on the development machine (Fedora 44, Linux x86_64) during the platform foundation milestone.
+
+### Toolchain
+
+The following toolchain was verified on Fedora 44 (Linux x86_64):
+
+- Rust targets installed: `x86_64-unknown-linux-gnu`, `aarch64-linux-android`, `armv7-linux-androideabi`, `i686-linux-android`, `x86_64-linux-android`.
+- Android SDK: `~/Android/Sdk`, with Android platform 37.2, build-tools 36.0.0/37.0.0, and NDK `30.0.16248370`.
+- Java: OpenJDK 25.0.5, with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`.
+- Gradle wrapper: 9.6.1.
+- Tauri CLI and Rust Tauri dependencies: 2.12.7.
+
+### Linux
+
+- `cargo tauri dev` launches the Vite development server and desktop application successfully.
+- `cargo tauri build --debug` produces `.deb`, `.rpm`, and `.AppImage` bundles under `src-tauri/target/debug/bundle/` (Flatpak packaging is still pending).
+- `cargo build`, `cargo test`, and `cargo clippy` pass.
+- The debug binary creates `~/.local/share/com.colkt.app/colkt.db` and applies migrations.
+- System dependencies for development builds are the standard Tauri Linux requirements (webkit2gtk, gtk3, libsoup, etc., provided by the distribution).
+
+### Android
+
+- `cargo tauri android init` generated `src-tauri/gen/android` (applicationId/namespace `com.colkt.app`, minSdk 24, compileSdk/targetSdk 37, debug suffix `.debug`).
+- `cargo tauri android build --apk --debug` successfully cross-compiles the Rust dependency tree for all four Android architectures: ARM64, ARMv7, x86, and x86_64.
+- The build successfully produces a universal debug APK at `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`.
+- The APK was installed successfully on a physical Android device using ADB. The application launches and remains open.
+- Bundled SQLite (`libsqlite3-sys`/`rusqlite`) compiles successfully for Android.
+- Android build and APK assembly have been verified using OpenJDK 25 and Gradle 9.6.1.
+
+### Android project tracking
+
+`src-tauri/gen/android/` is generated once by `cargo tauri android init` and should be committed so the project can be reproduced and opened in Android Studio. Its `.gitignore` excludes machine-local state: `local.properties`, `key.properties`/`keystore.properties`, `.gradle/`, `build/` outputs, `.cxx/`, `.idea/` state, and generated Tauri files (`tauri.properties`, `tauri.build.gradle.kts`, `tauri.settings.gradle`, `proguard-tauri.pro`, `jniLibs/**/*.so` symlinks). Do not commit signing keystores or SDK paths.
+
+### Android permissions
+
+The generated `AndroidManifest.xml` declares `android.permission.INTERNET`. This is retained deliberately: Colkt is offline-first, but approved V1 metadata integrations (TMDB, TVmaze, Open Library — see `docs/FEATURES.md` §B3/I2 and `docs/SECURITY.md` §6) require optional network access, and the Tauri WebView runtime expects the permission to be present. No other network or storage permissions are granted; SAF is used for file access instead of broad storage permissions.
+
+## 8. Non-Goals for V1
 
 - Platform-specific UI theming beyond appropriate native conventions.
 - Push notifications.
