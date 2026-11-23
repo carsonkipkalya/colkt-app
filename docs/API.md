@@ -878,7 +878,25 @@ type AppErrorPayload = AppError;
 9. The frontend must not assume that a command succeeded until its promise resolves successfully.
 10. Raw filesystem paths and platform-specific resource identifiers must not be exposed to general UI components. Use controlled resource references and display names instead.
 
-## 16. Contract Maintenance
+## 16. Application
+
+### `ping()` → `{ ok: true }`
+
+Connectivity smoke test for the frontend/backend IPC boundary. Returns a minimal success payload and performs no data access. `ok` is always the literal `true` on success; failures are reported through the standard `AppError` contract.
+
+```ts
+type PingResponse = {
+  ok: true;
+};
+```
+
+#### Testing note
+
+Rust unit tests exercise command functions and `AppError` serialisation directly. Frontend Vitest tests exercise the service layer (`src/services/`) with Tauri's `invoke` mocked. Neither currently exercises a live frontend-to-Rust IPC round trip; a real integration test can be introduced once a suitable Tauri test harness is established.
+
+---
+
+## 17. Contract Maintenance
 
 - This document is the source of truth for frontend-to-backend command and event contracts.
 - Any command or event change must update this document and its corresponding Rust and TypeScript types.

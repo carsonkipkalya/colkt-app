@@ -90,3 +90,55 @@ impl From<rusqlite::Error> for AppError {
         AppError::new(ErrorCode::Internal, "database operation failed")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn app_error_serializes_to_ipc_contract() {
+        let err = AppError::new(ErrorCode::NotFound, "Media item not found");
+        assert_eq!(
+            serde_json::to_value(&err).unwrap(),
+            serde_json::json!({
+                "code": "not_found",
+                "message": "Media item not found",
+                "details": null
+            })
+        );
+    }
+
+    #[test]
+    fn app_error_details_serializes_when_present() {
+        let err = AppError::new(ErrorCode::InvalidInput, "bad input")
+            .with_details(serde_json::json!({ "field": "title" }));
+        assert_eq!(
+            serde_json::to_value(&err).unwrap(),
+            serde_json::json!({
+                "code": "invalid_input",
+                "message": "bad input",
+                "details": { "field": "title" }
+            })
+        );
+    }
+
+    #[test]
+    fn all_error_codes_have_snake_case_wire_values() {
+        for code in [
+            ErrorCode::NotFound,
+            ErrorCode::InvalidInput,
+            ErrorCode::Conflict,
+            ErrorCode::UnavailableOffline,
+            ErrorCode::EngineError,
+            ErrorCode::PermissionDenied,
+            ErrorCode::IoError,
+            ErrorCode::Locked,
+            ErrorCode::Unsupported,
+            ErrorCode::Internal,
+        ] {
+            let value = serde_json::to_value(code).unwrap();
+            assert!(value.is_string());
+            assert_eq!(value.as_str().unwrap(), code.as_str());
+        }
+    }
+}

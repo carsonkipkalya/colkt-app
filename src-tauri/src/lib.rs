@@ -1,3 +1,4 @@
+pub mod commands;
 pub mod db;
 pub mod error;
 
@@ -8,7 +9,7 @@ use crate::error::{AppError, ErrorCode};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![commands::app::ping])
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
